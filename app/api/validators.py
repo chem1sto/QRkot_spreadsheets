@@ -17,18 +17,6 @@ FULL_AMOUNT_NO_LESS_THAN_INVESTED_AMOUNT_ERROR_MESSAGE = (
 )
 
 
-def check_charity_project_fields_not_empty_or_null(
-        charity_project: CharityProject,
-        session: AsyncSession,
-):
-    if value == '' or value is None:
-        raise HTTPException(
-            status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
-            detail='Обязательные поля не могут быть пустыми!',
-        )
-    return value
-
-
 async def check_charity_project_name_duplicate(
         charity_project_name: str,
         session: AsyncSession,

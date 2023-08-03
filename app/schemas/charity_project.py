@@ -44,10 +44,6 @@ class CharityProjectBase(BaseModel):
         title=FULL_AMOUNT,
         description=FULL_AMOUNT_DESCRIPTION
     )
-    invested_amount: Optional[PositiveInt] = Field(
-        default=DEFAULT_INVESTED_AMOUNT,
-        title=INVESTED_AMOUNT,
-    )
 
     class Config:
         extra = Extra.forbid
@@ -55,19 +51,21 @@ class CharityProjectBase(BaseModel):
 
 class CharityProjectUpdate(CharityProjectBase):
     """Схема для обновления проекта пожертвований."""
-    @validator('name', 'description', 'full_amount')
-    def check_empty_values(cls, value: str | int):
-        if value == '' or value is None:
-            raise ValueError(EMPTY_FIELD_ERROR_MESSAGE)
-        return value
-
     @validator('name')
     def check_name_value_and_max_length(cls, value: str):
+        if value == '' or value is None:
+            raise ValueError(EMPTY_FIELD_ERROR_MESSAGE)
         if len(value) > MAX_LENGTH_PROJECT_NAME or len(value) == 0:
             raise ValueError(NAME_VALUE_ERROR_MESSAGE)
         if value.isnumeric():
             raise ValueError(NAME_VALUE_NOT_A_NUMBER_ERROR_MESSAGE)
         return value
+
+    @root_validator(skip_on_failure=True)
+    def check_empty_values(cls, values):
+        if values is None:
+            raise ValueError(EMPTY_FIELD_ERROR_MESSAGE)
+        return values
 
 
 class CharityProjectCreate(CharityProjectUpdate):
@@ -89,6 +87,10 @@ class CharityProjectCreate(CharityProjectUpdate):
         ...,
         title=FULL_AMOUNT,
         description=FULL_AMOUNT_DESCRIPTION
+    )
+    invested_amount: PositiveInt = Field(
+        default=DEFAULT_INVESTED_AMOUNT,
+        title=INVESTED_AMOUNT,
     )
 
 
