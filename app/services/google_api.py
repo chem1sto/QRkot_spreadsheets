@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from aiogoogle import Aiogoogle
 from app.core import settings
