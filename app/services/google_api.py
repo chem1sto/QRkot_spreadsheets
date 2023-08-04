@@ -5,22 +5,22 @@ from app.core import settings
 from app.constants import COLUMN_COUNT, ROW_COUNT
 
 DATE_TIME_FORMAT = '%Y/%m/%d %H:%M:%S'
-FIRST_TABLE_CELL = 'R1C1'
+FIRST_TABLE_CELL_COORD = (1, 1)
 GOOGLE_TABLE_BODY = dict(
-        properties=dict(
-            title='Отчет от {now_date_time}',
-            locale='ru_RU',
-        ),
-        sheets=[dict(properties=dict(
-            sheetType='GRID',
-            sheetId=0,
-            title='Лист1',
-            gridProperties=dict(
-                rowCount=ROW_COUNT,
-                columnCount=COLUMN_COUNT,
-            )
-        ))]
-    )
+    properties=dict(
+        title='Отчет от {now_date_time}',
+        locale='ru_RU',
+    ),
+    sheets=[dict(properties=dict(
+        sheetType='GRID',
+        sheetId=0,
+        title='Лист1',
+        gridProperties=dict(
+            rowCount=ROW_COUNT,
+            columnCount=COLUMN_COUNT,
+        )
+    ))]
+)
 TABLE_HEADER = [
     ['Отчет от', '{now_date_time}'],
     ['Топ проектов по скорости закрытия'],
@@ -72,6 +72,16 @@ async def set_user_permissions(
         ))
 
 
+def get_spreadsheet_range(
+        first: tuple[int, int],
+        last: tuple[int, int] | None = None
+) -> str:
+    range_template = 'R{}C{}'
+    return ':'.join(
+        range_template.format(*cell) for cell in (first, last) if cell
+    )
+
+
 async def spreadsheets_update_value(
         spreadsheet_id: str,
         closed_projects: list,
@@ -106,8 +116,8 @@ async def spreadsheets_update_value(
     await wrapper_services.as_service_account(
         service.spreadsheets.values.update(
             spreadsheetId=spreadsheet_id,
-            range=(
-                f'{FIRST_TABLE_CELL}:R{table_rows}C{table_columns}'
+            range=get_spreadsheet_range(
+                FIRST_TABLE_CELL_COORD, (table_rows, table_columns)
             ),
             valueInputOption='USER_ENTERED',
             json=update_body
