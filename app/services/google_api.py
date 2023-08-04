@@ -1,43 +1,59 @@
-from datetime import datetime
+from datetime import datetime as dt
 
 from aiogoogle import Aiogoogle
 from app.core import settings
+from app.constants import COLUMN_COUNT, ROW_COUNT
 
-FORMAT = "%Y/%m/%d %H:%M:%S"
+DATE_TIME_FORMAT = '%Y/%m/%d %H:%M:%S'
+FIRST_TABLE_CELL = 'R1C1'
+GOOGLE_TABLE_BODY = dict(
+        properties=dict(
+            title='Отчет от {now_date_time}',
+            locale='ru_RU',
+        ),
+        sheets=[dict(properties=dict(
+            sheetType='GRID',
+            sheetId=0,
+            title='Лист1',
+            gridProperties=dict(
+                rowCount=ROW_COUNT,
+                columnCount=COLUMN_COUNT,
+            )
+        ))]
+    )
+TABLE_HEADER = [
+    ['Отчет от', '{now_date_time}'],
+    ['Топ проектов по скорости закрытия'],
+    ['Название проекта', 'Время сбора', 'Описание']
+]
+ROW_COUNT_ERROR_MESSAGE = (
+    'В созданной таблице строк или столбцов меньше, чем требуется!'
+)
 
 
-async def spreadsheets_create(wrapper_services: Aiogoogle) -> str:
+async def spreadsheets_create(
+        wrapper_services: Aiogoogle,
+        date_time_now: str = None,
+        spreadsheet_body=None
+) -> str:
     """Создание новой google-таблицы."""
-    now_date_time = datetime.now().strftime(FORMAT)
+    if date_time_now is None:
+        date_time_now = dt.now().strftime(DATE_TIME_FORMAT)
+    if spreadsheet_body is None:
+        spreadsheet_body = GOOGLE_TABLE_BODY.copy()
+        spreadsheet_body['properties']['title'] = (
+            GOOGLE_TABLE_BODY['properties']['title'].format(
+                now_date_time=date_time_now
+            ))
     service = await wrapper_services.discover('sheets', 'v4')
-    spreadsheet_body = {
-        'properties': {
-            'title': f'Отчет от {now_date_time}',
-            'locale': 'ru_RU'
-        },
-        'sheets': [
-            {
-                'properties': {
-                    'sheetType': 'GRID',
-                    'sheetId': 0,
-                    'title': 'Лист1',
-                    'gridProperties': {
-                        'rowCount': 100,
-                        'columnCount': 10
-                    }
-                }
-            }
-        ]
-    }
     response = await wrapper_services.as_service_account(
         service.spreadsheets.create(json=spreadsheet_body)
     )
-    spreadsheetid = response['spreadsheetId']
-    return spreadsheetid
+    return response['spreadsheetId']
 
 
 async def set_user_permissions(
-        spreadsheetid: str,
+        spreadsheet_id: str,
         wrapper_services: Aiogoogle
 ) -> None:
     """
@@ -50,41 +66,49 @@ async def set_user_permissions(
     service = await wrapper_services.discover('drive', 'v3')
     await wrapper_services.as_service_account(
         service.permissions.create(
-            fileId=spreadsheetid,
+            fileId=spreadsheet_id,
             json=permissions_body,
             fields="id"
         ))
 
 
 async def spreadsheets_update_value(
-        spreadsheetid: str,
+        spreadsheet_id: str,
         closed_projects: list,
-        wrapper_services: Aiogoogle
+        wrapper_services: Aiogoogle,
+        date_time_now: str = None
 ) -> None:
     """Запись данных, полученных из БД, в google-таблицу."""
-    now_date_time = datetime.now().strftime(FORMAT)
+    if date_time_now is None:
+        date_time_now = dt.now().strftime(DATE_TIME_FORMAT)
     service = await wrapper_services.discover('sheets', 'v4')
+    table_header = TABLE_HEADER.copy()
+    table_header[0][1] = TABLE_HEADER[0][1].format(
+            now_date_time=date_time_now
+        )
     table_values = [
-        ['Отчет от', now_date_time],
-        ['Топ проектов по скорости закрытия'],
-        ['Название проекта', 'Время сбора', 'Описание']
+        *table_header,
+        *[list(map(
+            str,
+            [project['name'],
+             project['close_date'] - project['create_date'],
+             project['description']]
+        )) for project in closed_projects]
     ]
-    for project in closed_projects:
-        print(project)
-        new_row = [
-            str(project['name']),
-            str(project['close_date'] - project['create_date']),
-            str(project['description'])
-        ]
-        table_values.append(new_row)
     update_body = {
         'majorDimension': 'ROWS',
         'values': table_values
     }
+    table_rows = len(table_header) + len(closed_projects)
+    table_columns = max(len(row) for row in table_header)
+    if table_rows > ROW_COUNT or table_columns > COLUMN_COUNT:
+        raise ValueError(ROW_COUNT_ERROR_MESSAGE)
     await wrapper_services.as_service_account(
         service.spreadsheets.values.update(
-            spreadsheetId=spreadsheetid,
-            range='A1:C30',
+            spreadsheetId=spreadsheet_id,
+            range=(
+                f'{FIRST_TABLE_CELL}:R{table_rows}C{table_columns}'
+            ),
             valueInputOption='USER_ENTERED',
             json=update_body
         )
