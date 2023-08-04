@@ -94,8 +94,8 @@ async def spreadsheets_update_value(
     service = await wrapper_services.discover('sheets', 'v4')
     table_header = TABLE_HEADER.copy()
     table_header[0][1] = TABLE_HEADER[0][1].format(
-            now_date_time=date_time_now
-        )
+        now_date_time=date_time_now
+    )
     table_values = [
         *table_header,
         *[list(map(
