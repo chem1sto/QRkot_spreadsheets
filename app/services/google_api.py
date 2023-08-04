@@ -101,7 +101,7 @@ async def spreadsheets_update_value(
     if table_rows > ROW_COUNT:
         raise ValueError(ROW_COUNT_ERROR_MESSAGE.format(
             created_rows=ROW_COUNT, rows=table_rows))
-    if table_rows > COLUMN_COUNT:
+    if table_columns > COLUMN_COUNT:
         raise ValueError(COLUMN_COUNT_ERROR_MESSAGE.format(
             created_columns=COLUMN_COUNT, columns=table_columns)
         )

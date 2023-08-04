@@ -9,7 +9,7 @@ from app.services.google_api import (
     spreadsheets_create, set_user_permissions, spreadsheets_update_value
 )
 
-ERROR_MESSAGE = 'Возникла ошибка: {error}.'
+ERROR_MESSAGE = 'Возникла ошибка: {error}'
 router = APIRouter()
 
 
@@ -39,5 +39,5 @@ async def get_report(
             wrapper_services
         )
     except Exception as error:
-        raise Exception(ERROR_MESSAGE.format(error))
+        raise Exception(ERROR_MESSAGE.format(error=error))
     return GOOGLE_TABLE_LINK.format(spreadsheet_id=spreadsheet_id)
