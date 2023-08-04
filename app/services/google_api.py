@@ -1,3 +1,4 @@
+from typing import Union
 from datetime import datetime as dt
 
 from aiogoogle import Aiogoogle
@@ -74,7 +75,7 @@ async def set_user_permissions(
 
 def get_spreadsheet_range(
         first: tuple[int, int],
-        last: tuple[int, int] | None = None
+        last: Union[tuple[int, int], None]
 ) -> str:
     range_template = 'R{}C{}'
     return ':'.join(
@@ -110,7 +111,7 @@ async def spreadsheets_update_value(
         'values': table_values
     }
     table_rows = len(table_header) + len(closed_projects)
-    table_columns = max(len(row) for row in table_header)
+    table_columns = max(len(column) for column in table_header)
     if table_rows > ROW_COUNT or table_columns > COLUMN_COUNT:
         raise ValueError(ROW_COUNT_ERROR_MESSAGE)
     await wrapper_services.as_service_account(
