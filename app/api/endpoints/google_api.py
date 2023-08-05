@@ -44,7 +44,7 @@ async def get_report(
         )
     except ValueError as error:
         raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND,
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             detail=ERROR_MESSAGE.format(error=error)
         )
     return GOOGLE_TABLE_LINK.format(spreadsheet_id=spreadsheet_id)
