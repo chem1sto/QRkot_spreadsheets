@@ -1,4 +1,5 @@
 import copy
+from typing import Any
 from datetime import datetime as dt
 
 from aiogoogle import Aiogoogle
@@ -6,7 +7,7 @@ from app.core import settings
 from app.constants import COLUMN_COUNT, ROW_COUNT
 
 
-DATE_TIME_NOW = dt.now().strftime('%Y/%m/%d %H:%M:%S')
+FORMAT = '%Y/%m/%d %H:%M:%S'
 GOOGLE_TABLE_BODY = dict(
     properties=dict(
         title='Отчет от {now_date_time}',
@@ -23,17 +24,17 @@ GOOGLE_TABLE_BODY = dict(
     ))]
 )
 TABLE_HEADER = [
-    ['Отчет от', DATE_TIME_NOW],
+    ['Отчет от', '{now_date_time}'],
     ['Топ проектов по скорости закрытия'],
     ['Название проекта', 'Время сбора', 'Описание']
 ]
 ROW_COUNT_ERROR_MESSAGE = (
     'В созданной таблице слишком мало строк! '
-    'Создано: {created_rows} строки. Требуемое количество: {rows} строк.'
+    'Создано:' + str(ROW_COUNT) + 'строки. Требуемое количество: {rows} строк.'
 )
 COLUMN_COUNT_ERROR_MESSAGE = (
     'В созданной таблице слишком мало столбцов! '
-    'Создано: {created_columns} столбца. '
+    'Создано:' + str(COLUMN_COUNT) + 'столбца. '
     'Требуемое количество: {columns} столбцов.'
 )
 
@@ -41,19 +42,20 @@ COLUMN_COUNT_ERROR_MESSAGE = (
 async def spreadsheets_create(
         wrapper_services: Aiogoogle,
         spreadsheet_body=None
-) -> str:
+) -> tuple[Any, str]:
     """Создание новой google-таблицы."""
+    now_date_time = dt.now().strftime(FORMAT)
     if spreadsheet_body is None:
         spreadsheet_body = copy.deepcopy(GOOGLE_TABLE_BODY)
         spreadsheet_body['properties']['title'] = (
             GOOGLE_TABLE_BODY['properties']['title'].format(
-                now_date_time=DATE_TIME_NOW
+                now_date_time=now_date_time
             ))
     service = await wrapper_services.discover('sheets', 'v4')
     response = await wrapper_services.as_service_account(
         service.spreadsheets.create(json=spreadsheet_body)
     )
-    return response['spreadsheetId']
+    return response['spreadsheetId'], now_date_time
 
 
 async def set_user_permissions(
@@ -80,11 +82,18 @@ async def spreadsheets_update_value(
         spreadsheet_id: str,
         closed_projects: list,
         wrapper_services: Aiogoogle,
+        now_date_time: str = None
 ) -> None:
     """Запись данных, полученных из БД, в google-таблицу."""
+    if now_date_time is None:
+        now_date_time = dt.now().strftime(FORMAT)
+    table_header = copy.deepcopy(TABLE_HEADER)
+    table_header[0][1] = TABLE_HEADER[0][1].format(
+        now_date_time=now_date_time
+    )
     service = await wrapper_services.discover('sheets', 'v4')
     table_values = [
-        *TABLE_HEADER,
+        *table_header,
         *[list(map(
             str,
             [project['name'],
@@ -100,10 +109,10 @@ async def spreadsheets_update_value(
     table_columns = max(map(len, table_values))
     if table_rows > ROW_COUNT:
         raise ValueError(ROW_COUNT_ERROR_MESSAGE.format(
-            created_rows=ROW_COUNT, rows=table_rows))
+            rows=table_rows))
     if table_columns > COLUMN_COUNT:
         raise ValueError(COLUMN_COUNT_ERROR_MESSAGE.format(
-            created_columns=COLUMN_COUNT, columns=table_columns)
+            columns=table_columns)
         )
     await wrapper_services.as_service_account(
         service.spreadsheets.values.update(

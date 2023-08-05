@@ -1,6 +1,7 @@
 from aiogoogle import Aiogoogle
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from http import HTTPStatus
 
 from app.constants import GOOGLE_TABLE_LINK
 from app.core import current_superuser, get_async_session, get_service
@@ -31,13 +32,19 @@ async def get_report(
         session
     )
     try:
-        spreadsheet_id = await spreadsheets_create(wrapper_services)
+        spreadsheet_id, now_date_time = await spreadsheets_create(
+            wrapper_services
+        )
         await set_user_permissions(spreadsheet_id, wrapper_services)
         await spreadsheets_update_value(
             spreadsheet_id,
             projects,
-            wrapper_services
+            wrapper_services,
+            now_date_time
         )
-    except Exception as error:
-        raise Exception(ERROR_MESSAGE.format(error=error))
+    except ValueError as error:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail=ERROR_MESSAGE.format(error=error)
+        )
     return GOOGLE_TABLE_LINK.format(spreadsheet_id=spreadsheet_id)
