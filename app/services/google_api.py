@@ -1,5 +1,4 @@
 import copy
-from typing import Any
 from datetime import datetime as dt
 
 from aiogoogle import Aiogoogle
@@ -30,19 +29,20 @@ TABLE_HEADER = [
 ]
 ROW_COUNT_ERROR_MESSAGE = (
     'В созданной таблице слишком мало строк! '
-    'Создано:' + str(ROW_COUNT) + 'строки. Требуемое количество: {rows} строк.'
+    f'Создано: {ROW_COUNT}. '
+    'Требуемое количество: {rows}.'
 )
 COLUMN_COUNT_ERROR_MESSAGE = (
     'В созданной таблице слишком мало столбцов! '
-    'Создано:' + str(COLUMN_COUNT) + 'столбца. '
-    'Требуемое количество: {columns} столбцов.'
+    f'Создано: {COLUMN_COUNT}. '
+    'Требуемое количество: {columns}.'
 )
 
 
 async def spreadsheets_create(
         wrapper_services: Aiogoogle,
         spreadsheet_body=None
-) -> tuple[Any, str]:
+) -> str:
     """Создание новой google-таблицы."""
     now_date_time = dt.now().strftime(FORMAT)
     if spreadsheet_body is None:
@@ -55,7 +55,7 @@ async def spreadsheets_create(
     response = await wrapper_services.as_service_account(
         service.spreadsheets.create(json=spreadsheet_body)
     )
-    return response['spreadsheetId'], now_date_time
+    return response['spreadsheetId']
 
 
 async def set_user_permissions(
@@ -82,14 +82,11 @@ async def spreadsheets_update_value(
         spreadsheet_id: str,
         closed_projects: list,
         wrapper_services: Aiogoogle,
-        now_date_time: str = None
 ) -> None:
     """Запись данных, полученных из БД, в google-таблицу."""
-    if now_date_time is None:
-        now_date_time = dt.now().strftime(FORMAT)
     table_header = copy.deepcopy(TABLE_HEADER)
     table_header[0][1] = TABLE_HEADER[0][1].format(
-        now_date_time=now_date_time
+        now_date_time=dt.now().strftime(FORMAT)
     )
     service = await wrapper_services.discover('sheets', 'v4')
     table_values = [
