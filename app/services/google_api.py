@@ -29,13 +29,11 @@ TABLE_HEADER = [
 ]
 ROW_COUNT_ERROR_MESSAGE = (
     'В созданной таблице слишком мало строк! '
-    f'Создано: {ROW_COUNT}. '
-    'Требуемое количество: {rows}.'
+    f'Создано: {ROW_COUNT}. Требуемое количество: {{rows}}.'
 )
 COLUMN_COUNT_ERROR_MESSAGE = (
     'В созданной таблице слишком мало столбцов! '
-    f'Создано: {COLUMN_COUNT}. '
-    'Требуемое количество: {columns}.'
+    f'Создано: {COLUMN_COUNT}. Требуемое количество: {{columns}}.'
 )
 
 
